@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Items</title>
+</head>
+<body>
+<h1>Items for category {{category.name}}</h1>
+<ul>
+    {% for i in items %}
+    <li>{{i.name}}</li>
+    {% endfor %}
+</ul>
+</body>
+</html>
