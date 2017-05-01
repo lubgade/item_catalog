@@ -6,21 +6,23 @@ from sqlalchemy import create_engine
 
 Base = declarative_base()
 
-class Jewelry(Base):
-    __tablename__ = 'jewelry'
+class Categories(Base):
+    __tablename__ = 'categories'
 
     name = Column(String(250), nullable=False)
     id = Column(Integer, primary_key=True)
 
 
-class Categories(Base):
-    __tablename__ = 'categories'
+class Items(Base):
+    __tablename__ = 'items'
 
     id = Column(Integer, primary_key=True)
-    name= Column(String(250), nullable=False)
+    name= Column(String(500), nullable=False)
     price = Column(String(10), nullable=False)
-    jewelry_id = Column(Integer, Foreign_key('jewelry.id'))
-    jewelry = relationship(Jewelry)
+    picture = Column(String(500))
+    description = Column(String(600))
+    category_id = Column(Integer, ForeignKey('categories.id'))
+    category = relationship(Categories)
 
 
 engine = create_engine('sqlite:///jewelrydb.db')
