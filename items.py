@@ -3,10 +3,10 @@ from sqlalchemy.orm import sessionmaker
 
 from database_setup import Categories, Items, Base
 
-engine = create_engine('sqlite:///jewlerydb.db')
+engine = create_engine('sqlite:///jewelrydb.db')
 
-Base.metadata.drop_all(engine)
-Base.metadata.create_all(engine)
+#Base.metadata.drop_all(engine)
+#Base.metadata.create_all(engine)
 
 Base.metadata.bind = engine
 
@@ -69,3 +69,4 @@ session.add(item2)
 session.commit()
 
 
+print "Added items"
