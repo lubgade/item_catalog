@@ -15,15 +15,14 @@ session = DBsession()
 
 @app.route('/Catalog')
 def catalog():
-    category = session.query(Categories).first()
-    items = session.query(Items).filter_by(category_id=category.id)
-    #return render_template('catalog.html', categories=categories)
-    output =""
-    for i in items:
-        output += i.name
-        output += "</br>"
+    categories = session.query(Categories)
+    return render_template('catalog.html', categories=categories)
 
-    return output
+@app.route('/Catalog/<categories_name>/')
+def items(categories_name):
+    category = session.query(Categories).filter_by(name=categories_name).one()
+    items = session.query(Items).filter_by(category=category)
+    return render_template('items.html',category=category, items=items)
 
 
 if __name__ == "__main__":
