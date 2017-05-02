@@ -1,0 +1,19 @@
+<div class="jumbotron">
+<div class="container text-center">
+    <h1>Leena's Jewelry Shoppe</h1>
+    <p>Fine handcrafted jewelry</p>
+</div>
+</div>
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#">Leena's</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="{{url_for('catalog')}}">Home</a></li>
+      <li><a href="{{url_for('items',categories_name='Necklaces')}}">Necklaces</a></li>
+      <li><a href="{{url_for('items',categories_name='Bracelets')}}">Bracelets</a></li>
+      <li><a href="{{url_for('items',categories_name='Earrings')}}">Earrings</a></li>
+    </ul>
+  </div>
+</nav>
