@@ -1,9 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Catalog</title>
-</head>
+{% extends 'main.html' %}
+{% block content %}
 <body>
 <ul>
 {% for c in categories %}
@@ -11,4 +7,4 @@
 {% endfor %}
 </ul>
 </body>
-</html>
+{% endblock %}
