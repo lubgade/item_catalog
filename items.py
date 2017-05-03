@@ -15,7 +15,7 @@ DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
 # Category 1
-category1 = Categories(name="Necklaces")
+category1 = Categories(name="Necklaces", picture="images/necklace.jpg")
 
 session.add(category1)
 session.commit()
@@ -38,7 +38,7 @@ session.add(item3)
 session.commit()
 
 
-category2 = Categories(name="Bracelets")
+category2 = Categories(name="Bracelets", picture="images/necklace.jpg")
 
 session.add(category2)
 session.commit()
@@ -53,7 +53,7 @@ item2 = Items(name="Macrame bracelet", description="beautiful handmade Macrame b
 session.add(item2)
 session.commit()
 
-category3 = Categories(name="Earrings")
+category3 = Categories(name="Earrings", picture="images/necklace.jpg")
 
 session.add(category1)
 session.commit()
