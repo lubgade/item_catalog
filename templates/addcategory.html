@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add category</title>
+</head>
+<body>
+<h1>Add a new category</h1>
+<form method="post">
+    <dl>
+        <dt>Name:</dt>
+            <dd>
+                <input type="text" name="name" size="30">
+            </dd>
+        <dt>Picture:</dt>
+            <dd>
+                <input type="text" name="picture" size="30">
+            </dd>
+    </dl>
+    <input type="submit" value="Create">
+    <a href="{{url_for('catalog')}}">Go back</a>
+</form>
+</body>
+</html>
