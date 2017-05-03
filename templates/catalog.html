@@ -1,10 +1,28 @@
 {% extends 'main.html' %}
 {% block content %}
-<body>
 <ul>
-{% for c in categories %}
-    <a href="{{url_for('items',categories_name=c.name)}}"><li>{{c.name}}</li></a>
-{% endfor %}
-</ul>
-</body>
+    <div class="flex-container">
+    <div class="row list-group">
+        {% for c in categories %}
+        <div class=" item col-xs-4 col-lg-4">
+            <div class="thumbnail">
+                <img src="{{url_for('static',filename='')}}{{c.picture}}" class="group list-group-image" alt="image">
+                <div class="caption text-center">
+                    <h4 class="group inner">{{c.name}}</h4>
+                    <div class="row">
+                        <div class="col-xs-md-12 col-md-6 text-center">
+                            <a href="{{url_for('editCategory',category_name=c.name)}}">edit</a>
+                        </div>
+                        <div class="col-xs-md-12 col-md-6 text-center">
+                            <a href="{{url_for('deleteCategory',category_name=c.name)}}">delete</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="{{url_for('addCategory')}}">Add new category</a>
+</div>
+
 {% endblock %}
