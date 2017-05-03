@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>edit item</title>
+</head>
+<body>
+<h1>edit item</h1>
+<form method="post">
+    <dl>
+        <dt>Name:</dt>
+            <dd>
+                <input type="text" size="30" name="name" placeholder="{{item.name}}">
+            </dd>
+        <dt>Description:</dt>
+            <dd>
+                <textarea name="description" row="5" cols="30" placeholder="{{item.description}}"></textarea>
+            </dd>
+        <dt>Price:</dt>
+            <dd>
+                <input type="text" name="price" size="30" placeholder="{{item.price}}">
+            </dd>
+        <dt>Picture:</dt>
+            <dd>
+                <input type="text" name="picture" size="30" placeholder="{{item.picture}}">
+            </dd>
+    </dl>
+    <input type="submit" value="edit">
+    <a href="{{url_for('items',categories_name=categories_name)}}">Go back</a>
+</form>
+</body>
+</html>
