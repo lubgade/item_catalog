@@ -10,6 +10,7 @@ class Categories(Base):
     __tablename__ = 'categories'
 
     name = Column(String(250), nullable=False)
+    picture = Column(String(500), nullable=False)
     id = Column(Integer, primary_key=True)
 
 
