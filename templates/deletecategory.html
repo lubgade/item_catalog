@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delete category</title>
+</head>
+<body>
+<h1>Are you sure you want to delete {{category_name}}</h1>
+<form method="post">
+    <input type="submit" value="delete">
+    <a href="{{url_for('catalog')}}">Go back</a>
+</form>
+</body>
+</html>
