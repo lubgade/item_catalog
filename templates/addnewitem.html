@@ -6,7 +6,7 @@
 </head>
 <body>
 <h1>Add new item to category {{categories_name}}</h1>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <dl>
         <dt>Name:</dt>
             <dd>
@@ -22,7 +22,7 @@
             </dd>
         <dt>Picture:</dt>
             <dd>
-                <input type="text" name="picture" size="30">
+                <input type="file" name="picture" size="30">
             </dd>
     </dl>
     <input type="submit" value="create">
