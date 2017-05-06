@@ -6,7 +6,7 @@
 </head>
 <body>
 <h1>edit item</h1>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <dl>
         <dt>Name:</dt>
             <dd>
@@ -22,7 +22,8 @@
             </dd>
         <dt>Picture:</dt>
             <dd>
-                <input type="text" name="picture" size="30" placeholder="{{item.picture}}">
+                <label for="fileupload">{{item.picture}}</label>
+                <input type="file" name="picture" id="fileupload" multiple value="{{item.picture}}">
             </dd>
     </dl>
     <input type="submit" value="edit">
