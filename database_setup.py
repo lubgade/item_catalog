@@ -12,6 +12,16 @@ class Categories(Base):
     name = Column(String(250), nullable=False)
     picture = Column(String(500), nullable=False)
     id = Column(Integer, primary_key=True)
+    categoryItems = relationship('Items', backref='categories', lazy='dynamic')
+
+    @property
+    def serialize(self):
+        return {
+            "id": "self.id",
+            "name": "self.name",
+            "picture": "self.picture",
+            "categoryItems": "self.categoryItems"
+        }
 
 
 class Items(Base):
@@ -23,7 +33,17 @@ class Items(Base):
     picture = Column(String(500))
     description = Column(String(600))
     category_id = Column(Integer, ForeignKey('categories.id'))
-    category = relationship(Categories)
+    #category = relationship(Categories)
+
+    @property
+    def serialize(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'price': self.price,
+            'picture': self.picture,
+            'description': self.description
+        }
 
 
 engine = create_engine('sqlite:///jewelrydb.db')
