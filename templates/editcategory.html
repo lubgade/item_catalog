@@ -6,7 +6,7 @@
 </head>
 <body>
 <h1>Edit category {{category_name}}</h1>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <dl>
         <dt>Name:</dt>
             <dd>
@@ -14,7 +14,8 @@
             </dd>
         <dt>Picture:</dt>
             <dd>
-                <input type="text" name="picture" size="30" placeholder="{{category.picture}}">
+                <input type="file" name="picture" class="custom-file-input" id="fileupload">
+                <label for="fileupload">{{category.picture}}</label>
             </dd>
     </dl>
     <input type="submit" value="edit">
