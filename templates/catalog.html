@@ -6,7 +6,7 @@
         {% for c in categories %}
         <div class=" item col-xs-4 col-lg-4">
             <div class="thumbnail">
-                <img src="{{url_for('static',filename='')}}{{c.picture}}" class="group list-group-image" alt="image">
+                <img src="{{url_for('uploaded_file',filename='')}}{{c.picture}}" class="group list-group-image" alt="image">
                 <div class="caption text-center">
                     <h4 class="group inner">{{c.name}}</h4>
                     <div class="row">
