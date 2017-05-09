@@ -1,10 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Edit category</title>
-</head>
-<body>
+{% extends "main.html" %}
+
+{% block content %}
 <h1>Edit category {{category_name}}</h1>
 <form method="post" enctype="multipart/form-data">
     <dl>
@@ -14,12 +10,11 @@
             </dd>
         <dt>Picture:</dt>
             <dd>
-                <input type="file" name="picture" class="custom-file-input" id="fileupload">
+                <input type="file" name="picture" placeholder="{{category.picture}}" id="fileupload" value="hello">
                 <label for="fileupload">{{category.picture}}</label>
             </dd>
     </dl>
     <input type="submit" value="edit">
     <a href="{{url_for('catalog')}}">Go back</a>
 </form>
-</body>
-</html>
+{% endblock %}
