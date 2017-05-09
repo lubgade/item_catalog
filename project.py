@@ -56,12 +56,13 @@ def gconnect():
         oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
+        print 'credentials in gconnect=%s' % credentials
     except FlowExchangeError:
         response = make_response(json.dumps('Failed to upgrade authorization code'), 401)
         response.headers['Content-type'] = 'application/json'
         return response
 
-    # check that acess toke is valid
+    # check that access token is valid
     access_token = credentials.access_token
     url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token)
     h = httplib2.Http()
@@ -72,6 +73,10 @@ def gconnect():
         response = make_response(json.dumps(result.get('error')), 500)
         response.headers['Content-type'] = 'application/json'
         return response
+
+    # store the access token info in the session for later use
+    login_session['access_token'] = access_token
+    print 'access_token = %s' % login_session['access_token']
 
     # verfiy that the access token is for the intended user
     gplus_id = credentials.id_token['sub']
@@ -93,8 +98,7 @@ def gconnect():
         response.headers['Content-type'] = 'application/json'
         return response
 
-    # store the access token info in the session for later use
-    login_session['access_token'] = credentials.access_token
+    #login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
     # Get user info
@@ -107,6 +111,8 @@ def gconnect():
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
+
+    print "in gconnect = %s" % login_session['credentials']
 
     # user_id = getUserId(login_session['email'])
     # if not user_id:
@@ -162,21 +168,21 @@ def gDisconnect():
 @app.route('/')
 @app.route('/Catalog')
 def catalog():
-    categories = session.query(Categories)
+    categories = getAllCategories()
     return render_template('catalog.html', categories=categories)
 
 
 @app.route('/Catalog/<string:categories_name>')
 def items(categories_name):
-    categories = session.query(Categories)
-    category = session.query(Categories).filter_by(name=categories_name).one()
-    items = session.query(Items).filter_by(category_id=category.id)
+    categories = getAllCategories()
+    category = getCategory(categories_name)
+    items = getAllItems(category.id)
     return render_template('items.html', category=category, items=items, categories=categories)
 
 
 @app.route('/Catalog/json')
 def catalogJson():
-    categories = session.query(Categories).all()
+    categories = getAllCategories()
     serializedResult = []
     for c in categories:
         serializeditems = {}
@@ -195,6 +201,7 @@ def catalogJson():
 
 @app.route('/Catalog/add', methods=['GET','POST'])
 def addCategory():
+    categories = getAllCategories()
     if request.method == 'POST':
         name = request.form['name']
         name = name[0].upper() + name[1:].lower()
@@ -217,12 +224,13 @@ def addCategory():
             session.commit()
             return redirect(url_for('catalog'))
     else:
-        return render_template('addcategory.html')
+        return render_template('addcategory.html', categories=categories)
 
 
 @app.route('/Catalog/<string:category_name>/edit', methods=['GET','POST'])
 def editCategory(category_name):
-    category = session.query(Categories).filter_by(name=category_name).one()
+    categories = getAllCategories()
+    category = getCategory(category_name)
     if category:
         if request.method == 'POST':
             for attr in request.form:
@@ -242,14 +250,16 @@ def editCategory(category_name):
             session.commit()
             return redirect(url_for('catalog'))
         else:
-            return render_template('editcategory.html', category_name=category.name, category=category)
+            return render_template('editcategory.html', category_name=category.name, category=category,
+                                   categories=categories)
     else:
         return page_not_found('Invalid category')
 
 
 @app.route('/Catalog/<string:category_name>/delete', methods=['GET','POST'])
 def deleteCategory(category_name):
-    category = session.query(Categories).filter_by(name=category_name).one()
+    categories = getAllCategories()
+    category = getCategory(category_name)
     if category:
         if request.method == 'POST':
             os.remove(category.picture)
@@ -257,14 +267,15 @@ def deleteCategory(category_name):
             session.commit()
             return redirect(url_for('catalog'))
         else:
-            return render_template('deletecategory.html', category_name=category.name)
+            return render_template('deletecategory.html', category_name=category.name, categories=categories)
     else:
         return page_not_found('Invalid category')
 
 
 @app.route('/Catalog/<string:categories_name>/<string:item_name>/edit', methods=['GET','POST'])
 def editItem(categories_name, item_name):
-    item = session.query(Items).filter_by(name=item_name).one()
+    categories = getAllCategories()
+    item = getItem(item_name)
     if item:
         if request.method == 'POST':
             for attr in request.form:
@@ -284,14 +295,16 @@ def editItem(categories_name, item_name):
             session.commit()
             return redirect(url_for('items', categories_name=categories_name))
         else:
-            return render_template('edititem.html', categories_name=categories_name, item=item, item_name=item_name)
+            return render_template('edititem.html', categories_name=categories_name, item=item, item_name=item_name,
+                                   categories=categories)
     else:
         return page_not_found('Item not found')
 
 
 @app.route('/Catalog/<string:categories_name>/<item_name>/delete', methods=['GET','POST'])
 def deleteItem(categories_name, item_name):
-    item = session.query(Items).filter_by(name=item_name).one()
+    categories = getAllCategories()
+    item = getItem(item_name)
     if item:
         if request.method == 'POST':
             os.remove(item.picture)
@@ -300,13 +313,15 @@ def deleteItem(categories_name, item_name):
             session.commit()
             return redirect(url_for('items', categories_name=categories_name))
         else:
-            return render_template('deleteitem.html', categories_name=categories_name, item=item, item_name=item_name)
+            return render_template('deleteitem.html', categories_name=categories_name, item=item, item_name=item_name,
+                                   categories=categories)
     else:
         return page_not_found('Item not found')
 
 
 @app.route('/Catalog/<string:categories_name>/add', methods=['GET','POST'])
 def addNewItem(categories_name):
+    categories = getAllCategories()
     if request.method == 'POST':
         category = session.query(Categories).filter_by(name=categories_name).one()
         image = request.files['picture']
@@ -321,7 +336,7 @@ def addNewItem(categories_name):
         session.commit()
         return redirect(url_for('items', categories_name=categories_name))
     else:
-        return render_template('addnewitem.html', categories_name=categories_name)
+        return render_template('addnewitem.html', categories_name=categories_name, categories=categories)
 
 
 @app.errorhandler(404)
@@ -339,6 +354,26 @@ def allowed_file(filename):
     # check if the extension is valid
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# get all categories
+def getAllCategories():
+    return session.query(Categories).all()
+
+
+# get a category by name
+def getCategory(cname):
+    return session.query(Categories).filter_by(name=cname).one()
+
+
+# get an item by name
+def getItem(iname):
+    return session.query(Items).filter_by(name=iname).one()
+
+
+# get all items for a particular category by id
+def getAllItems(c_id):
+    return session.query(Items).filter_by(category_id=c_id)
 
 
 def getUserId(email):
