@@ -1,10 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Add new item</title>
-</head>
-<body>
+{% extends "main.html" %}
+
+{% block content %}
 <h1>Add new item to category {{categories_name}}</h1>
 <form method="post" enctype="multipart/form-data">
     <dl>
@@ -28,6 +24,4 @@
     <input type="submit" value="create">
     <a href="{{url_for('items',categories_name=categories_name)}}">Go back</a>
 </form>
-
-</body>
-</html>
+{% endblock %}
