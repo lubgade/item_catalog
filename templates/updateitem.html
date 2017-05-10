@@ -17,23 +17,26 @@
                     </div>
                     <div class="form-group">
                         <label for="price">Price:</label>
-                        <input type="text" name="price" id="price" placeholder="{{'example:$9.99' if newItem else item.price}}">
+                        <input type="text" name="price" id="price" value="{{'example:$9.99' if newItem else item.price}}">
                     </div>
                     <div class="form-group">
-                        <label for="fileplaceholder">Picture:</label>
-                        <input type="file" name="picture" id="fileplaceholder"value="{{'' if newItem else item.picture}}">
+                        <label for="fileplaceholder">Picture: <span style="font-weight:lighter;">{{'' if newItem else item.picture}}</span>
+                            <label id="fileplaceholder" class="btn btn-default btn-file">Upload..
+                                <input type="file" name="picture" style="display:none;">
+                            </label>
+                        </label>
                     </div>
-                    <div class="padding-bottom">
+                    <div class="container-fluid">
                         <button type="submit" class="btn btn-default">
                             <span aria-hidden="true">{{'Create' if newItem else 'edit'}}</span>
                         </button>
+                        <a href="{{url_for('items',categories_name=categories_name)}}">
+                            <button class="btn btn-danger delete" type="submit">
+                                <span aria-hidden="true">Cancel</span>
+                            </button>
+                        </a>
                     </div>
                 </form>
-                <a href="{{url_for('items',categories_name=categories_name)}}">
-                    <button class="btn btn-danger delete" type="submit">
-                        <span aria-hidden="true">Cancel</span>
-                    </button>
-                </a>
             </div>
         </div>
     </div>

@@ -2,29 +2,34 @@
 
 {% block content %}
 <div class="container">
-    <div class="col-sm-12">
-        <div class="jumbotron">
-            <h2>{{'Add a new category' if newCategory else 'Edit category'}}</h2>
-            <form method="post" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="name">Name:</label>
-                    <input type="text" name="name" class="form-control" id="name" value="{{'' if newCategory else category.name}}">
-                </div>
-                <div class="form-group">
-                    <label for="fileplaceholder">Picture:</label>
-                    <input type="file" name="picture" id="fileplaceholder"value="{{'' if newCategory else category.picture}}">
-                </div>
-                <div class="padding-bottom">
-                    <button type="submit" class="btn btn-default">
-                        <span aria-hidden="true">{{'Create' if newCategory else 'edit'}}</span>
-                    </button>
-                </div>
-            </form>
-            <a href="{{url_for('catalog')}}">
-                <button class="btn btn-danger delete">
-                    <span aria-hidden="true">Cancel</span>
-                </button>
-            </a>
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="jumbotron">
+                <h2>{{'Add a new category' if newCategory else 'Edit category'}}</h2>
+                <form method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" name="name" class="form-control" id="name" value="{{'' if newCategory else category.name}}">
+                    </div>
+                    <div class="form-group">
+                        <label for="fileupload1">Picture: <span style="font-weight:lighter;">{{'' if newCategory else category.picture}}</span>
+                            <label class="btn btn-default btn-file" id="fileupload1">Upload..
+                                <input type="file" name="picture"  style="display:none;">
+                            </label>
+                        </label>
+                    </div>
+                    <div class="container-fluid">
+                        <button type="submit" class="btn btn-default">
+                            <span aria-hidden="true">{{'Create' if newCategory else 'edit'}}</span>
+                        </button>
+                        <a href="{{url_for('catalog')}}">
+                            <button class="btn btn-danger delete" type="submit">
+                                <span aria-hidden="true">Cancel</span>
+                            </button>
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
