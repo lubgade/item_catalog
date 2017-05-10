@@ -222,9 +222,10 @@ def addCategory():
             newCategory = Categories(name=request.form['name'],picture=path)
             session.add(newCategory)
             session.commit()
+            flash('Category ' + name + ' successfully added!')
             return redirect(url_for('catalog'))
     else:
-        return render_template('addcategory.html', categories=categories)
+        return render_template('updatecategory.html', categories=categories, newCategory=True)
 
 
 @app.route('/Catalog/<string:category_name>/edit', methods=['GET','POST'])
@@ -248,9 +249,10 @@ def editCategory(category_name):
                     setattr(category, attr, request.form[attr])
             session.add(category)
             session.commit()
+            flash('Category ' + category.name + ' successfully updated!')
             return redirect(url_for('catalog'))
         else:
-            return render_template('editcategory.html', category_name=category.name, category=category,
+            return render_template('updatecategory.html', category_name=category.name, category=category,
                                    categories=categories)
     else:
         return page_not_found('Invalid category')
@@ -262,9 +264,17 @@ def deleteCategory(category_name):
     category = getCategory(category_name)
     if category:
         if request.method == 'POST':
+            items = getAllItems(category.id)
+            if items:
+                for item in items:
+                    os.remove(item.picture)
+                    session.delete(item)
+                    session.commit()
+
             os.remove(category.picture)
             session.delete(category)
             session.commit()
+            flash('Category ' + category.name + ' successfully deleted!')
             return redirect(url_for('catalog'))
         else:
             return render_template('deletecategory.html', category_name=category.name, categories=categories)
@@ -293,6 +303,7 @@ def editItem(categories_name, item_name):
                         setattr(item, attr, request.form[attr])
             session.add(item)
             session.commit()
+            flash('Item ' + item.name + ' successfully updated!')
             return redirect(url_for('items', categories_name=categories_name))
         else:
             return render_template('edititem.html', categories_name=categories_name, item=item, item_name=item_name,
@@ -311,6 +322,7 @@ def deleteItem(categories_name, item_name):
             print item.picture
             session.delete(item)
             session.commit()
+            flash('Item ' + item.name + ' successfully deleted!')
             return redirect(url_for('items', categories_name=categories_name))
         else:
             return render_template('deleteitem.html', categories_name=categories_name, item=item, item_name=item_name,
@@ -334,6 +346,7 @@ def addNewItem(categories_name):
                         picture=path, category_id=category.id)
         session.add(newItem)
         session.commit()
+        flash('New item ' + request.form['name'] + ' added for category ' + category.name)
         return redirect(url_for('items', categories_name=categories_name))
     else:
         return render_template('addnewitem.html', categories_name=categories_name, categories=categories)
@@ -373,7 +386,7 @@ def getItem(iname):
 
 # get all items for a particular category by id
 def getAllItems(c_id):
-    return session.query(Items).filter_by(category_id=c_id)
+    return session.query(Items).filter_by(category_id=c_id).all()
 
 
 def getUserId(email):
