@@ -1,0 +1,41 @@
+{% extends "main.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="jumbotron">
+                <h2>{{'Add a new item' if newItem else 'Edit item'}}</h2>
+                <form method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" name="name" class="form-control" id="name" value="{{'' if newItem else item.name}}">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description:</label>
+                        <textarea name="description" id="description" class="form-control" rows="3">{{'' if newItem else item.description}}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price:</label>
+                        <input type="text" name="price" id="price" placeholder="{{'example:$9.99' if newItem else item.price}}">
+                    </div>
+                    <div class="form-group">
+                        <label for="fileplaceholder">Picture:</label>
+                        <input type="file" name="picture" id="fileplaceholder"value="{{'' if newItem else item.picture}}">
+                    </div>
+                    <div class="padding-bottom">
+                        <button type="submit" class="btn btn-default">
+                            <span aria-hidden="true">{{'Create' if newItem else 'edit'}}</span>
+                        </button>
+                    </div>
+                </form>
+                <a href="{{url_for('items',categories_name=categories_name)}}">
+                    <button class="btn btn-danger delete" type="submit">
+                        <span aria-hidden="true">Cancel</span>
+                    </button>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
