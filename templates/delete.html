@@ -1,0 +1,41 @@
+{% extends "main.html" %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="jumbotron">
+                <h2>{{'Delete Item' if deleteItem else 'Delete Category'}}</h2>
+                {% if deleteItem %}
+                <h3>Are you sure you want to delete item {{item_name}}</h3>
+                {% else %}
+                <h3>Are you sure you want to delete category {{category_name}}</h3>
+                {% endif %}
+                <form method="post">
+                    <button class="btn btn-danger delete">
+                        <span aria-hidden="true">Delete</span>
+                    </button>
+                </form>
+                {% if deleteItem %}
+                <p>
+                    <a href="{{url_for('items',categories_name=categories_name)}}">
+                        <button class="btn btn-default">
+                            <span aria-hidden="true">Cancel</span>
+                        </button>
+                  </a>
+                </p>
+                {% else %}
+                <p>
+                    <a href="{{url_for('catalog')}}">
+                        <button class="btn btn-default">
+                            <span aria-hidden="true">Cancel</span>
+                        </button>
+                    </a>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
