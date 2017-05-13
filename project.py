@@ -1,8 +1,9 @@
 import os
 from flask import Flask, render_template, url_for, redirect, flash, request, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
+from datetime import datetime, timedelta
 
-from database_setup import Base, Categories, Items
+from database_setup import Base, Categories, Items, User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -57,6 +58,12 @@ def gconnect():
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
         print 'credentials in gconnect=%s' % credentials
+        print credentials.refresh_token
+        print 'credential.token_expiry=%s' % credentials.token_expiry
+        print 'credentials.toke_response[expires_in]=%s' % credentials.token_response["expires_in"]
+        print datetime.now().time()
+        login_session['expires_in'] = credentials.token_expiry
+
     except FlowExchangeError:
         response = make_response(json.dumps('Failed to upgrade authorization code'), 401)
         response.headers['Content-type'] = 'application/json'
@@ -94,6 +101,7 @@ def gconnect():
     stored_credentials = login_session.get('credentials')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_credentials is not None and gplus_id == stored_gplus_id:
+        login_session['credentials'] = credentials
         response = make_response(json.dumps("Current user is already connected"), 200)
         response.headers['Content-type'] = 'application/json'
         return response
@@ -107,30 +115,33 @@ def gconnect():
     answer = requests.get(userinfo_url,params=params)
 
     data = answer.json()
+    print data
 
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
+    #d = datetime.now() + timedelta(seconds=int(credentials.token_response['expires_in']))
+    #login_session['expire_time'] = d.time()
+    #print login_session['expire_time']
 
-    print "in gconnect = %s" % login_session['credentials']
-
-    # user_id = getUserId(login_session['email'])
-    # if not user_id:
-    #     user_id = createUser(login_session)
-    #
-    # login_session['user_id'] = user_id
+    user_id = getUserId(login_session['email'])
+    if not user_id:
+        user_id = createUser(login_session)
+        login_session['user_id'] = user_id
 
     print 'in gconnect = %s' % login_session.keys()
-    output = ''
-    output += '<h1>Welcome, '
-    output += login_session['username']
-    output += '!</h1>'
-    output += '<img src="'
-    output += login_session['picture']
-    output += '" style="width:300px; height:300px; border-radius:150px; -webkit-border-radius:150px;-moz-border-radius:150px"'
-    flash("You are now logged in as %s" % login_session['username'])
-    print "Done"
-    return output
+    print "done"
+    return redirect(url_for('catalog'))
+    # output = ''
+    # output += '<h1>Welcome, '
+    # output += login_session['username']
+    # output += '!</h1>'
+    # output += '<img src="'
+    # output += login_session['picture']
+    # output += '" style="width:300px; height:300px; border-radius:150px; -webkit-border-radius:150px;-moz-border-radius:150px"'
+    # flash("You are now logged in as %s" % login_session['username'])
+    # print "Done"
+    # return output
 
 
 # Disconnect - Revoke a current user's token and reset their login_session
@@ -149,15 +160,21 @@ def gDisconnect():
     url = "https://accounts.google.com/o/oauth2/revoke?token=%s" % access_token
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
-    if result['status'] == '200':
+    print result['status']
+    expire_in = login_session.get('expires_in')
+    R = datetime.now() > expire_in
+    print R
+    if result['status'] == '200' and R:
         del login_session['access_token']
         del login_session['gplus_id']
         del login_session['username']
         del login_session['picture']
         del login_session['email']
-        response = make_response(json.dumps('Successfully disconnected'), 200)
-        response.headers['Content-type'] = 'application/json'
-        return response
+        #response = make_response(json.dumps('Successfully disconnected'), 200)
+        #response.headers['Content-type'] = 'application/json'
+        flash("Successfully disconnected")
+        #return response
+        return redirect(url_for('catalog'))
     else:
         response = make_response(json.dumps('Failed to revoke token for given user', 400))
         response.headers['Content-type'] = 'application/json'
@@ -169,7 +186,7 @@ def gDisconnect():
 @app.route('/Catalog')
 def catalog():
     categories = getAllCategories()
-    return render_template('catalog.html', categories=categories)
+    return render_template('catalog.html', categories=categories, user=userLoggedIn())
 
 
 @app.route('/Catalog/<string:categories_name>')
@@ -177,7 +194,7 @@ def items(categories_name):
     categories = getAllCategories()
     category = getCategory(categories_name)
     items = getAllItems(category.id)
-    return render_template('items.html', category=category, items=items, categories=categories)
+    return render_template('items.html', category=category, items=items, categories=categories, user=userLoggedIn())
 
 
 @app.route('/Catalog/json')
@@ -196,57 +213,100 @@ def catalogJson():
             allItems.append(item)
         serializeditems['items'] = allItems
         serializedResult.append(serializeditems)
+
+    # R = serializedResult.json
+    # print R
+    # return render_template('showjson.html', Result=jsonify(categories=serializedResult))
     return jsonify(categories = serializedResult)
 
 
 @app.route('/Catalog/add', methods=['GET','POST'])
 def addCategory():
+    if not userLoggedIn():
+        flash('Please login')
+        return redirect(url_for('catalog'))
+
     categories = getAllCategories()
     if request.method == 'POST':
-        name = request.form['name']
-        name = name[0].upper() + name[1:].lower()
-        category = session.query(Categories).filter_by(name=name).first()
-        if category:
-            flash('Category already exists with that name')
-            return redirect(url_for('addCategory'))
-        else:
-            image = request.files['picture']
-            path = ''
-            filename = ''
-            print 'image=%s' % image
-            if image and allowed_file(image.filename):
-                filename = secure_filename(image.filename)
-                print 'filename=%s' % filename
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                image.save(path)
-            newCategory = Categories(name=request.form['name'],picture=path)
-            session.add(newCategory)
-            session.commit()
-            flash('Category ' + name + ' successfully added!')
-            return redirect(url_for('catalog'))
+        name = ''
+        if request.form['name']:
+            name = request.form['name']
+            name = name[0].upper() + name[1:].lower()
+            category = session.query(Categories).filter_by(name=name).first()
+            if category:
+                flash('Category already exists with that name')
+                return redirect(url_for('addCategory'))
+
+        id = getUserId(login_session['email'])
+        image = request.files['picture']
+        path = ''
+        filename = ''
+        print 'image=%s' % image
+        if image and allowed_file(image.filename):
+            filename = secure_filename(image.filename)
+            print 'filename=%s' % filename
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image.save(path)
+        newCategory = Categories(name=request.form['name'],picture=path, user_id=id)
+        session.add(newCategory)
+        session.commit()
+        flash('Category ' + name + ' successfully added!')
+        return redirect(url_for('catalog'))
     else:
         return render_template('updatecategory.html', categories=categories, newCategory=True)
 
 
 @app.route('/Catalog/<string:category_name>/edit', methods=['GET','POST'])
 def editCategory(category_name):
+    if not userLoggedIn():
+        flash('Please login')
+        return redirect(url_for('catalog'))
+
+
     categories = getAllCategories()
     category = getCategory(category_name)
-    if category:
-        if request.method == 'POST':
-            for attr in request.form:
-                if request.form[attr]:
-                    if attr == 'picture':
-                        image = request.files['picture']
-                        path = ''
-                        if image and allowed_file(image.filename):
-                            filename = secure_filename(image.filename)
-                            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                            image.save(path)
-                            os.remove(category.picture)
-                            category.picture = path
+    loggeduser_id = getUserId(login_session['email'])
+    print loggeduser_id
+    print category.user_id
+    if not matchUserId(loggeduser_id, category.user_id):
+        flash('You are not authorized to edit this category')
+        return redirect(url_for('catalog'))
 
-                    setattr(category, attr, request.form[attr])
+    if category:
+        print 'in editcategory'
+        if request.method == 'POST':
+            if request.form['name']:
+                category.name = request.form['name']
+            if request.files['picture']:
+                image = request.files['picture']
+                print image
+                path = ''
+                if image and allowed_file(image.filename):
+                    filename = secure_filename(image.filename)
+                    print 'filename=%s' % filename
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    os.remove(category.picture)
+                    image.save(path)
+                    category.picture = path
+                    print category.picture
+
+
+            # for attr in request.form:
+            #     if request.form[attr]:
+            #         if attr == 'picture':
+            #             image = request.files['picture']
+            #             print 'image=%s' % image
+            #             path = ''
+            #             if image and allowed_file(image.filename):
+            #                 filename = secure_filename(image.filename)
+            #                 path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            #                 print 'path=%s' % path
+            #                 image.save(path)
+            #                 os.remove(category.picture)
+            #                 category.picture = path
+            #                 print category.picture
+            #
+            #         setattr(category, attr, request.form[attr])
             session.add(category)
             session.commit()
             flash('Category ' + category.name + ' successfully updated!')
@@ -260,8 +320,20 @@ def editCategory(category_name):
 
 @app.route('/Catalog/<string:category_name>/delete', methods=['GET','POST'])
 def deleteCategory(category_name):
+    if not userLoggedIn():
+        flash('Please login')
+        return redirect(url_for('catalog'))
+
     categories = getAllCategories()
     category = getCategory(category_name)
+
+    loggeduser_id = getUserId(login_session['email'])
+    print loggeduser_id
+    print category.user_id
+    if not matchUserId(loggeduser_id, category.user_id):
+        flash('You are not authorized to delete this category')
+        return redirect(url_for('catalog'))
+
     if category:
         if request.method == 'POST':
             items = getAllItems(category.id)
@@ -277,36 +349,51 @@ def deleteCategory(category_name):
             flash('Category ' + category.name + ' successfully deleted!')
             return redirect(url_for('catalog'))
         else:
-            return render_template('deletecategory.html', category_name=category.name, categories=categories)
+            return render_template('delete.html', category_name=category.name, categories=categories)
     else:
         return page_not_found('Invalid category')
 
 
 @app.route('/Catalog/<string:categories_name>/<string:item_name>/edit', methods=['GET','POST'])
 def editItem(categories_name, item_name):
+    if not userLoggedIn():
+        flash('Please login')
+        return redirect(url_for('catalog'))
     categories = getAllCategories()
     item = getItem(item_name)
+
+    loggeduser_id = getUserId(login_session['email'])
+    if not matchUserId(loggeduser_id, item.user_id):
+        flash('You are not authorized to edit this item')
+        return redirect(url_for('catalog'))
+
     if item:
         if request.method == 'POST':
+            if request.files['picture']:
+                image = request.files['picture']
+                print 'image=%s' % image
+                path = ''
+                filename = ''
+                if image and allowed_file(image.filename):
+                    filename = secure_filename(image.filename)
+                    print 'filename=%s' % filename
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    print 'in edit item, path=%s' % path
+                    os.remove(item.picture)
+                    image.save(path)
+                    item.picture = path
+                    print item.picture
             for attr in request.form:
                     if request.form[attr]:
                         if attr == 'picture':
-                            image = request.files['picture']
-                            path = ''
-                            if image and allowed_file(image.filename):
-                                filename = secure_filename(filename)
-                                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                                image.save(path)
-                                os.remove(item.picture)
-                                item.picture = path
-                                print item.picture
+                            pass
                         setattr(item, attr, request.form[attr])
             session.add(item)
             session.commit()
             flash('Item ' + item.name + ' successfully updated!')
             return redirect(url_for('items', categories_name=categories_name))
         else:
-            return render_template('edititem.html', categories_name=categories_name, item=item, item_name=item_name,
+            return render_template('updateitem.html', categories_name=categories_name, item=item, item_name=item_name,
                                    categories=categories)
     else:
         return page_not_found('Item not found')
@@ -314,8 +401,17 @@ def editItem(categories_name, item_name):
 
 @app.route('/Catalog/<string:categories_name>/<item_name>/delete', methods=['GET','POST'])
 def deleteItem(categories_name, item_name):
+    if not userLoggedIn():
+        flash('Please login')
+        return redirect(url_for('catalog'))
     categories = getAllCategories()
     item = getItem(item_name)
+
+    loggeduser_id = getUserId(login_session['email'])
+    if not matchUserId(loggeduser_id, item.user_id):
+        flash('You are not authorized to delete this item')
+        return redirect(url_for('catalog'))
+
     if item:
         if request.method == 'POST':
             os.remove(item.picture)
@@ -325,14 +421,17 @@ def deleteItem(categories_name, item_name):
             flash('Item ' + item.name + ' successfully deleted!')
             return redirect(url_for('items', categories_name=categories_name))
         else:
-            return render_template('deleteitem.html', categories_name=categories_name, item=item, item_name=item_name,
-                                   categories=categories)
+            return render_template('delete.html', categories_name=categories_name, item_name=item_name,
+                                   categories=categories, deleteItem=True)
     else:
         return page_not_found('Item not found')
 
 
 @app.route('/Catalog/<string:categories_name>/add', methods=['GET','POST'])
 def addNewItem(categories_name):
+    if not userLoggedIn():
+        flash('Please login')
+        return redirect(url_for('catalog'))
     categories = getAllCategories()
     if request.method == 'POST':
         category = session.query(Categories).filter_by(name=categories_name).one()
@@ -343,13 +442,13 @@ def addNewItem(categories_name):
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image.save(path)
         newItem = Items(name=request.form['name'], description=request.form['description'], price=request.form['price'],
-                        picture=path, category_id=category.id)
+                        picture=path, category_id=category.id, user_id=getUserId(login_session['email']))
         session.add(newItem)
         session.commit()
         flash('New item ' + request.form['name'] + ' added for category ' + category.name)
         return redirect(url_for('items', categories_name=categories_name))
     else:
-        return render_template('addnewitem.html', categories_name=categories_name, categories=categories)
+        return render_template('updateitem.html', categories_name=categories_name, categories=categories, newItem=True)
 
 
 @app.errorhandler(404)
@@ -398,15 +497,28 @@ def getUserId(email):
 
 
 def createUser(login_session):
-    newUser = User(name=login_session['username'], email=login_session['email'], picture=login_session['picture'])
+    newUser = User(name=login_session['username'], email=login_session['email'], admin=False)
     session.add(newUser)
     session.commit()
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user.id
 
+
 def getUserInfo(user_id):
     user = session.query(User).filter_by(id=user_id).one()
     return user
+
+
+def userLoggedIn():
+    return 'email' in login_session
+    # if 'email' in login_session:
+    #     return True
+    # else:
+    #     return False
+
+
+def matchUserId(id,tomatch_id):
+    return id == tomatch_id
 
 
 

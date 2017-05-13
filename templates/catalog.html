@@ -4,9 +4,10 @@
     <div class="flex-container">
     <div class="row list-group">
         {% for c in categories %}
-        <div class=" item col-xs-4 col-lg-4">
+        <div class=" item col-sm-4 col-lg-6">
             <div class="thumbnail">
-                <img src="{{url_for('uploaded_file',filename='')}}{{c.picture}}" class="group list-group-image" alt="image">
+                <img src="{{url_for('uploaded_file',filename='')}}{{c.picture}}" class="group list-group-image"
+                     alt="image">
                 <div class="caption text-center">
                     <h4 class="group inner">{{c.name}}</h4>
                     <div class="row">
@@ -22,7 +23,9 @@
         </div>
         {% endfor %}
     </div>
-    <a href="{{url_for('addCategory')}}">Add new category</a>
+    <a href="{{url_for('addCategory')}}">
+        <button class="btn btn-danger">Add a new category</button>
+    </a>
 </div>
 
 {% endblock %}
