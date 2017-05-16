@@ -131,6 +131,7 @@ def gconnect():
 
     print 'in gconnect = %s' % login_session.keys()
     print "done"
+    flash("Successfully logged in")
     return redirect(url_for('catalog'))
     # output = ''
     # output += '<h1>Welcome, '
@@ -162,9 +163,12 @@ def gDisconnect():
     result = h.request(url, 'GET')[0]
     print result['status']
     expire_in = login_session.get('expires_in')
-    R = datetime.now() > expire_in
+    if expire_in:
+        R = datetime.now() > expire_in
+    else:
+        R = False
     print R
-    if result['status'] == '200' and R:
+    if result['status'] == '200' or R:
         del login_session['access_token']
         del login_session['gplus_id']
         del login_session['username']
@@ -186,7 +190,7 @@ def gDisconnect():
 @app.route('/Catalog')
 def catalog():
     categories = getAllCategories()
-    return render_template('catalog.html', categories=categories, user=userLoggedIn())
+    return render_template('catalog.html', categories=categories, user=userLoggedIn(), c=True)
 
 
 @app.route('/Catalog/<string:categories_name>')
@@ -194,10 +198,20 @@ def items(categories_name):
     categories = getAllCategories()
     category = getCategory(categories_name)
     items = getAllItems(category.id)
-    return render_template('items.html', category=category, items=items, categories=categories, user=userLoggedIn())
+    return render_template('items.html', category=category, items=items, categories=categories, user=userLoggedIn(),
+                           i=True)
 
 
-@app.route('/Catalog/json')
+@app.route('/Catalog/<string:category_name>/<string:item_name>/show')
+def showItem(category_name, item_name):
+    categories = getAllCategories()
+    category = getCategory(category_name)
+    item = getItem(item_name)
+    return render_template('showitem.html', category=category, item=item, categories=categories, it=True,
+                           user=userLoggedIn())
+
+
+@app.route('/Catalog/catalog.json')
 def catalogJson():
     categories = getAllCategories()
     serializedResult = []
@@ -214,10 +228,30 @@ def catalogJson():
         serializeditems['items'] = allItems
         serializedResult.append(serializeditems)
 
-    # R = serializedResult.json
-    # print R
-    # return render_template('showjson.html', Result=jsonify(categories=serializedResult))
+    #R = json.dumps(serializedResult, indent=4, separators=(',',':'))
+    #R = json.dumps(serializedResult)
+    #print R
+    #return render_template('showjson.html', Result=serializedResult, user=userLoggedIn())
     return jsonify(categories = serializedResult)
+
+
+@app.route('/Catalog/<string:category_name>/items.json')
+def itemsJson(category_name):
+    print category_name
+    category = getCategory(category_name)
+
+    items = getAllItems(category.id)
+    print items
+    return jsonify(items=[i.serialize for i in items])
+
+
+@app.route('/Catalog/<string:category_name>/<string:item_name>/item.json')
+def itemJson(category_name,item_name):
+    category = getCategory(category_name)
+    item = getItem(item_name)
+    print item
+    return jsonify(item=[item.serialize])
+
 
 
 @app.route('/Catalog/add', methods=['GET','POST'])
@@ -253,7 +287,7 @@ def addCategory():
         flash('Category ' + name + ' successfully added!')
         return redirect(url_for('catalog'))
     else:
-        return render_template('updatecategory.html', categories=categories, newCategory=True)
+        return render_template('updatecategory.html', categories=categories, newCategory=True, user=userLoggedIn())
 
 
 @app.route('/Catalog/<string:category_name>/edit', methods=['GET','POST'])
@@ -262,15 +296,16 @@ def editCategory(category_name):
         flash('Please login')
         return redirect(url_for('catalog'))
 
-
     categories = getAllCategories()
     category = getCategory(category_name)
     loggeduser_id = getUserId(login_session['email'])
     print loggeduser_id
     print category.user_id
-    if not matchUserId(loggeduser_id, category.user_id):
+    print checkAdmin(category)
+    if not matchUserId(loggeduser_id, category.user_id) or checkAdmin(category):
         flash('You are not authorized to edit this category')
         return redirect(url_for('catalog'))
+
 
     if category:
         print 'in editcategory'
@@ -313,7 +348,7 @@ def editCategory(category_name):
             return redirect(url_for('catalog'))
         else:
             return render_template('updatecategory.html', category_name=category.name, category=category,
-                                   categories=categories)
+                                   categories=categories, user=userLoggedIn())
     else:
         return page_not_found('Invalid category')
 
@@ -330,7 +365,7 @@ def deleteCategory(category_name):
     loggeduser_id = getUserId(login_session['email'])
     print loggeduser_id
     print category.user_id
-    if not matchUserId(loggeduser_id, category.user_id):
+    if not matchUserId(loggeduser_id, category.user_id) or checkAdmin(category):
         flash('You are not authorized to delete this category')
         return redirect(url_for('catalog'))
 
@@ -349,9 +384,11 @@ def deleteCategory(category_name):
             flash('Category ' + category.name + ' successfully deleted!')
             return redirect(url_for('catalog'))
         else:
-            return render_template('delete.html', category_name=category.name, categories=categories)
+            return render_template('delete.html', category_name=category.name, categories=categories, user=userLoggedIn())
     else:
         return page_not_found('Invalid category')
+
+
 
 
 @app.route('/Catalog/<string:categories_name>/<string:item_name>/edit', methods=['GET','POST'])
@@ -363,7 +400,7 @@ def editItem(categories_name, item_name):
     item = getItem(item_name)
 
     loggeduser_id = getUserId(login_session['email'])
-    if not matchUserId(loggeduser_id, item.user_id):
+    if not matchUserId(loggeduser_id, item.user_id) or checkAdmin(item):
         flash('You are not authorized to edit this item')
         return redirect(url_for('catalog'))
 
@@ -394,7 +431,7 @@ def editItem(categories_name, item_name):
             return redirect(url_for('items', categories_name=categories_name))
         else:
             return render_template('updateitem.html', categories_name=categories_name, item=item, item_name=item_name,
-                                   categories=categories)
+                                   categories=categories, user=userLoggedIn())
     else:
         return page_not_found('Item not found')
 
@@ -408,7 +445,7 @@ def deleteItem(categories_name, item_name):
     item = getItem(item_name)
 
     loggeduser_id = getUserId(login_session['email'])
-    if not matchUserId(loggeduser_id, item.user_id):
+    if not matchUserId(loggeduser_id, item.user_id) or checkAdmin(item):
         flash('You are not authorized to delete this item')
         return redirect(url_for('catalog'))
 
@@ -422,7 +459,7 @@ def deleteItem(categories_name, item_name):
             return redirect(url_for('items', categories_name=categories_name))
         else:
             return render_template('delete.html', categories_name=categories_name, item_name=item_name,
-                                   categories=categories, deleteItem=True)
+                                   categories=categories, deleteItem=True, user=userLoggedIn())
     else:
         return page_not_found('Item not found')
 
@@ -448,7 +485,8 @@ def addNewItem(categories_name):
         flash('New item ' + request.form['name'] + ' added for category ' + category.name)
         return redirect(url_for('items', categories_name=categories_name))
     else:
-        return render_template('updateitem.html', categories_name=categories_name, categories=categories, newItem=True)
+        return render_template('updateitem.html', categories_name=categories_name, categories=categories, newItem=True,
+                               user=userLoggedIn())
 
 
 @app.errorhandler(404)
@@ -511,14 +549,15 @@ def getUserInfo(user_id):
 
 def userLoggedIn():
     return 'email' in login_session
-    # if 'email' in login_session:
-    #     return True
-    # else:
-    #     return False
 
 
 def matchUserId(id,tomatch_id):
     return id == tomatch_id
+
+
+def checkAdmin(itemtochk):
+    return itemtochk.user.admin
+
 
 
 

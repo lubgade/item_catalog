@@ -11,7 +11,13 @@
       {% for c in categories %}
       <li><a href="{{url_for('items',categories_name='')}}{{c.name}}">{{c.name}}</a></li>
       {% endfor %}
-      <li><a href="{{url_for('catalogJson')}}">Json</a></li>
+      {% if c %}
+      <li><a href="{{url_for('catalogJson')}}">CatalogJson</a></li>
+      {% elif i %}
+      <li><a href="{{url_for('itemsJson',category_name=category.name)}}">ItemsJson</a></li>
+      {% elif it %}
+        <li><a href="{{url_for('itemJson',item_name=item.name,category_name=category.name)}}">ItemJson</a></li>
+      {% endif %}
     </ul>
     <ul class="nav navbar-nav navbar-right">
     {% if user %}
