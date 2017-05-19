@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, url_for, redirect, flash, request, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
+from PIL import Image
 
 from database_setup import Base, Categories, Items, User
 from sqlalchemy import create_engine
@@ -16,6 +17,8 @@ import httplib2
 import json
 from flask import make_response
 import requests
+import uuid
+
 
 CLIENT_ID = json.loads(open('client_secrets.json','r').read())['web']['client_id']
 APPLICATION_NAME = "Item-Catalog"
@@ -33,6 +36,7 @@ Base.metadata.bind = engine
 DBsession = sessionmaker(bind=engine)
 session = DBsession()
 
+
 @app.route('/login')
 def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)for x in xrange(32))
@@ -43,8 +47,6 @@ def showLogin():
 
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
-    #print request.args.get('state')
-    #print login_session['state']
     if request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state parameter!'), 401)
         response.headers['Content-type'] = 'application/json'
@@ -58,7 +60,6 @@ def gconnect():
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
         print 'credentials in gconnect=%s' % credentials
-        print credentials.refresh_token
         print 'credential.token_expiry=%s' % credentials.token_expiry
         print 'credentials.toke_response[expires_in]=%s' % credentials.token_response["expires_in"]
         print datetime.now().time()
@@ -120,9 +121,6 @@ def gconnect():
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
-    #d = datetime.now() + timedelta(seconds=int(credentials.token_response['expires_in']))
-    #login_session['expire_time'] = d.time()
-    #print login_session['expire_time']
 
     user_id = getUserId(login_session['email'])
     if not user_id:
@@ -162,12 +160,15 @@ def gDisconnect():
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
     print result['status']
+
+    # if access_token is present but expired disconnect the user
     expire_in = login_session.get('expires_in')
     if expire_in:
         R = datetime.now() > expire_in
     else:
         R = False
     print R
+
     if result['status'] == '200' or R:
         del login_session['access_token']
         del login_session['gplus_id']
@@ -185,7 +186,7 @@ def gDisconnect():
         return response
 
 
-
+# All categories
 @app.route('/')
 @app.route('/Catalog')
 def catalog():
@@ -193,6 +194,7 @@ def catalog():
     return render_template('catalog.html', categories=categories, user=userLoggedIn(), c=True)
 
 
+# All the items in a particular category
 @app.route('/Catalog/<string:categories_name>')
 def items(categories_name):
     categories = getAllCategories()
@@ -202,15 +204,17 @@ def items(categories_name):
                            i=True)
 
 
+# show details of a particular item
 @app.route('/Catalog/<string:category_name>/<string:item_name>/show')
 def showItem(category_name, item_name):
     categories = getAllCategories()
     category = getCategory(category_name)
     item = getItem(item_name)
-    return render_template('showitem.html', category=category, item=item, categories=categories, it=True,
+    return render_template('show.html', category=category, item=item, categories=categories,
                            user=userLoggedIn())
 
 
+# JSON for the whole catalog - all categories & their respective items
 @app.route('/Catalog/catalog.json')
 def catalogJson():
     categories = getAllCategories()
@@ -229,12 +233,32 @@ def catalogJson():
         serializedResult.append(serializeditems)
 
     #R = json.dumps(serializedResult, indent=4, separators=(',',':'))
-    #R = json.dumps(serializedResult)
     #print R
-    #return render_template('showjson.html', Result=serializedResult, user=userLoggedIn())
     return jsonify(categories = serializedResult)
 
 
+# JSON for a particular category with all its items
+@app.route('/Catalog/<string:category_name>/category.json')
+def categoryJson(category_name):
+    category = getCategory(category_name)
+    print category.name
+    serializedResult = []
+    serializedItems = {}
+    allItems = []
+    for i in category.categoryItems:
+        item = {}
+        for cName in Items.__table__.columns.keys():
+            item[cName] = getattr(i,cName)
+        allItems.append(item)
+        serializedItems['items'] = allItems
+    for columnName in Categories.__table__.columns.keys():
+         serializedItems[columnName] = getattr(category,columnName)
+    serializedResult.append(serializedItems)
+
+    return jsonify(category = serializedResult)
+
+
+# JSON for all items in a category
 @app.route('/Catalog/<string:category_name>/items.json')
 def itemsJson(category_name):
     print category_name
@@ -245,6 +269,7 @@ def itemsJson(category_name):
     return jsonify(items=[i.serialize for i in items])
 
 
+# JSON for a particular item
 @app.route('/Catalog/<string:category_name>/<string:item_name>/item.json')
 def itemJson(category_name,item_name):
     category = getCategory(category_name)
@@ -253,7 +278,7 @@ def itemJson(category_name,item_name):
     return jsonify(item=[item.serialize])
 
 
-
+# add a new category
 @app.route('/Catalog/add', methods=['GET','POST'])
 def addCategory():
     if not userLoggedIn():
@@ -272,16 +297,24 @@ def addCategory():
                 return redirect(url_for('addCategory'))
 
         id = getUserId(login_session['email'])
+
         image = request.files['picture']
         path = ''
         filename = ''
         print 'image=%s' % image
         if image and allowed_file(image.filename):
             filename = secure_filename(image.filename)
+            ufilename = uniqueImageName(filename)
             print 'filename=%s' % filename
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image.save(path)
-        newCategory = Categories(name=request.form['name'],picture=path, user_id=id)
+            print 'ufilename=%s' % ufilename
+            i = imgResizer(image)
+            path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
+            print 'path=%s' % path
+            i.save(path)
+
+        if request.form['description']:
+            description = request.form['description']
+        newCategory = Categories(name=request.form['name'],picture=path, description=description, user_id=id,)
         session.add(newCategory)
         session.commit()
         flash('Category ' + name + ' successfully added!')
@@ -290,6 +323,7 @@ def addCategory():
         return render_template('updatecategory.html', categories=categories, newCategory=True, user=userLoggedIn())
 
 
+# edit a category
 @app.route('/Catalog/<string:category_name>/edit', methods=['GET','POST'])
 def editCategory(category_name):
     if not userLoggedIn():
@@ -312,16 +346,20 @@ def editCategory(category_name):
         if request.method == 'POST':
             if request.form['name']:
                 category.name = request.form['name']
+            if request.form['description']:
+                category.description = request.form['description']
             if request.files['picture']:
                 image = request.files['picture']
                 print image
                 path = ''
                 if image and allowed_file(image.filename):
                     filename = secure_filename(image.filename)
+                    ufilename = uniqueImageName(filename)
                     print 'filename=%s' % filename
-                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    i = imgResizer(image)
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
                     os.remove(category.picture)
-                    image.save(path)
+                    i.save(path)
                     category.picture = path
                     print category.picture
 
@@ -353,6 +391,7 @@ def editCategory(category_name):
         return page_not_found('Invalid category')
 
 
+# delete a category
 @app.route('/Catalog/<string:category_name>/delete', methods=['GET','POST'])
 def deleteCategory(category_name):
     if not userLoggedIn():
@@ -384,13 +423,13 @@ def deleteCategory(category_name):
             flash('Category ' + category.name + ' successfully deleted!')
             return redirect(url_for('catalog'))
         else:
-            return render_template('delete.html', category_name=category.name, categories=categories, user=userLoggedIn())
+            return render_template('delete.html', category_name=category.name, categories=categories,
+                                   user=userLoggedIn())
     else:
         return page_not_found('Invalid category')
 
 
-
-
+# edit an item from a category
 @app.route('/Catalog/<string:categories_name>/<string:item_name>/edit', methods=['GET','POST'])
 def editItem(categories_name, item_name):
     if not userLoggedIn():
@@ -414,10 +453,12 @@ def editItem(categories_name, item_name):
                 if image and allowed_file(image.filename):
                     filename = secure_filename(image.filename)
                     print 'filename=%s' % filename
-                    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    ufilename = uniqueImageName(filename)
+                    i = imgResizer(image)
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
                     print 'in edit item, path=%s' % path
                     os.remove(item.picture)
-                    image.save(path)
+                    i.save(path)
                     item.picture = path
                     print item.picture
             for attr in request.form:
@@ -436,6 +477,7 @@ def editItem(categories_name, item_name):
         return page_not_found('Item not found')
 
 
+# delete the item by name from a category
 @app.route('/Catalog/<string:categories_name>/<item_name>/delete', methods=['GET','POST'])
 def deleteItem(categories_name, item_name):
     if not userLoggedIn():
@@ -464,6 +506,7 @@ def deleteItem(categories_name, item_name):
         return page_not_found('Item not found')
 
 
+# add a new item for a particular category
 @app.route('/Catalog/<string:categories_name>/add', methods=['GET','POST'])
 def addNewItem(categories_name):
     if not userLoggedIn():
@@ -476,8 +519,10 @@ def addNewItem(categories_name):
         path = ''
         if image and allowed_file(image.filename):
             filename = secure_filename(image.filename)
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image.save(path)
+            ufilename = uniqueImageName(filename)
+            i = imgResizer(image)
+            path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
+            i.save(path)
         newItem = Items(name=request.form['name'], description=request.form['description'], price=request.form['price'],
                         picture=path, category_id=category.id, user_id=getUserId(login_session['email']))
         session.add(newItem)
@@ -489,6 +534,7 @@ def addNewItem(categories_name):
                                user=userLoggedIn())
 
 
+# error handler
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('error.html', error=e), 404
@@ -497,11 +543,12 @@ def page_not_found(e):
 # get file from folder to display on page
 @app.route('/<filename>')
 def uploaded_file(filename):
+    print 'filename=%s' % filename
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
+# check if the extension is valid
 def allowed_file(filename):
-    # check if the extension is valid
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -526,6 +573,7 @@ def getAllItems(c_id):
     return session.query(Items).filter_by(category_id=c_id).all()
 
 
+# get user_id by email
 def getUserId(email):
     try:
         user = session.query(User).filter_by(email=email).one()
@@ -534,6 +582,7 @@ def getUserId(email):
         return None
 
 
+# create a new user
 def createUser(login_session):
     newUser = User(name=login_session['username'], email=login_session['email'], admin=False)
     session.add(newUser)
@@ -542,26 +591,62 @@ def createUser(login_session):
     return user.id
 
 
+# get user by user_id
 def getUserInfo(user_id):
     user = session.query(User).filter_by(id=user_id).one()
     return user
 
 
+# check if the user's logged in
 def userLoggedIn():
     return 'email' in login_session
 
 
+# check if the current user's user_id matches to the user_id in category/item
 def matchUserId(id,tomatch_id):
     return id == tomatch_id
 
 
+# check if the user is admin/super user
 def checkAdmin(itemtochk):
     return itemtochk.user.admin
 
 
+# give a unique name to each image(important so that no 2 image files have the same name-especially while deleting)
+def uniqueImageName(image_name):
+    uId = str(uuid.uuid4())
+    name = os.path.splitext(image_name)[0]
+    ext = os.path.splitext(image_name)[-1]
+    return name + uId + ext
+
+
+# resize uploaded image to a particular size(for better display)
+def imgResizer(image):
+    i = Image.open(image)
+    size = 500, 350
+    print i.size
+    flag = 0
+    if i.size[0] < 500:
+        newWidth = 500
+        if i.size[1] < 350:
+            newHeight = 350
+        flag = 1
+    elif i.size[1] < 350:
+        newHeight = 350
+        if i.size[0] < 500:
+            newWidth = 500
+        flag = 1
+    if flag == 1:
+        i = i.resize((newWidth, newHeight), resample=0)
+        print i
+    else:
+        i = i.resize(size, resample=0)
+
+    return i
 
 
 if __name__ == "__main__":
     app.secret_key = 'super_secret_key'
     app.debug = True
+    #images = Images(app)
     app.run(host='0.0.0.0', port=8000)
