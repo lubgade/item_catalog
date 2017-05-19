@@ -7,20 +7,18 @@
 <nav class="navbar navbar-inverse">
   <div class="container-fluid">
     <ul class="nav navbar-nav navbar-center">
-       <li><a href="{{url_for('catalog')}}">Home</a></li>
-      {% for c in categories %}
-      <li><a href="{{url_for('items',categories_name='')}}{{c.name}}">{{c.name}}</a></li>
-      {% endfor %}
-      {% if c %}
-      <li><a href="{{url_for('catalogJson')}}">CatalogJson</a></li>
-      {% elif i %}
-      <li><a href="{{url_for('itemsJson',category_name=category.name)}}">ItemsJson</a></li>
-      {% elif it %}
+        <li><a href="{{url_for('catalog')}}">Categories</a></li>
+        {% if c %}
+        <li><a href="{{url_for('catalogJson')}}">CatalogJson</a></li>
+        {% elif i %}
+        <li><a href="{{url_for('categoryJson',category_name=category.name)}}">CategoryJson</a></li>
+        {% else %}
+        <li><a href="{{url_for('items',categories_name=category.name)}}">Items</a></li>
         <li><a href="{{url_for('itemJson',item_name=item.name,category_name=category.name)}}">ItemJson</a></li>
-      {% endif %}
+        {% endif %}
     </ul>
     <ul class="nav navbar-nav navbar-right">
-    {% if user %}
+        {% if user %}
         <li><a href="{{url_for('gDisconnect')}}" class="">logout</a></li>
         {% else %}
         <li><a href="{{url_for('showLogin')}}" class="">Sign In</a></li>
