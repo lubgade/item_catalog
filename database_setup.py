@@ -22,6 +22,7 @@ class Categories(Base):
     name = Column(String(250), nullable=False)
     picture = Column(String(500), nullable=False)
     id = Column(Integer, primary_key=True)
+    description = Column(String(600))
     categoryItems = relationship('Items', backref='categories', lazy='dynamic')
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship(User)
@@ -29,11 +30,12 @@ class Categories(Base):
     @property
     def serialize(self):
         return {
-            "id": "self.id",
-            "name": "self.name",
-            "picture": "self.picture",
-            "categoryItems": "self.categoryItems",
-            "user_id": "self.user_id"
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'picture': self.picture,
+            'categoryItems': self.categoryItems,
+            'user_id': self.user_id
         }
 
 
