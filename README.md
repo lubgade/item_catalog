@@ -21,6 +21,8 @@ This application provides a list of items within a variety of categories. Also p
 * Run `python items.py` to populate test items in the database(optional)
 * Run the application using `python project.py`
 * Access and test the application at `http://localhost:8000`
+* Check the database using `sqlite3 jewelrydb.db`
+  * Use sql statements to access the tables created in database_setup.py
 
 ## Features
 * Provides JSON API endpoints to the whole catalog, category with all its items as well as for a particular item
