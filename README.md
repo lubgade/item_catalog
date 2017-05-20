@@ -9,6 +9,9 @@ This application provides a list of items within a variety of categories. Also p
 ## Usage
 * To use this project - 
   * Clone the repo using `git clone https://github.com/lubgade/item_catalog` 
+    
+    OR
+    
   * Fork the repo
 * Launch the Vagrant VM using `vagrant up`
 * Run `vagrant ssh` which takes you to vagrant shell
@@ -21,4 +24,8 @@ This application provides a list of items within a variety of categories. Also p
 ## Features
 * Provides JSON API endpoints to the whole catalog, category with all its items as well as for a particular item
 * Provides a third party(Google) authentication & authorization service
-* 
+* CRUD operations - Authenticated & authorized users can create,update & delete the items/categories created by them
+
+## Future developments
+* Adding other OAuth providers such as Facebook,etc
+* Adding functionality to add products to cart & checkout 
