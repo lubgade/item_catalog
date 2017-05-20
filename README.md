@@ -4,7 +4,8 @@
 This application provides a list of items within a variety of categories. Also provides a user registration and authentication system. Registered users will have the ablity to add, edit and delete their own items.
 
 ## Setup
-* Install Vagrant & VirtualBox
+* Install [Vagrant](https://www.vagrantup.com)
+* Install [VirtualBox](https://www.virtualbox.org)
 
 ## Usage
 * To use this project - 
