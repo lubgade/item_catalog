@@ -27,8 +27,8 @@ session.add(category1)
 session.commit()
 
 #  Add items to category
-item1 = Items(name="Red Coral beads necklace", description="Vibrant and lively coral bead necklace", price="$29.99",
-              category_id=category1.id, picture="static/images/necklace1.jpg", user=user)
+item1 = Items(name="Red Coral beads and turquoise necklace", description="Vibrant and lively coral bead necklace paired with vibrant turquoise", price="$29.99",
+              category_id=category1.id, picture="static/images/redcoral_turquoise.jpg", user=user)
 session.add(item1)
 session.commit()
 
