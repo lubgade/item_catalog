@@ -12,9 +12,11 @@
         <li><a href="{{url_for('catalogJson')}}">CatalogJson</a></li>
         {% elif i %}
         <li><a href="{{url_for('categoryJson',category_name=category.name)}}">CategoryJson</a></li>
-        {% else %}
+        {% elif show_item %}
         <li><a href="{{url_for('items',categories_name=category.name)}}">Items</a></li>
         <li><a href="{{url_for('itemJson',item_name=item.name,category_name=category.name)}}">ItemJson</a></li>
+        {% elif update_item  or newItem %}
+        <li><a href="{{url_for('items',categories_name=categories_name)}}">Items</a></li>
         {% endif %}
     </ul>
     <ul class="nav navbar-nav navbar-right">
