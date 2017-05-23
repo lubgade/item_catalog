@@ -211,7 +211,7 @@ def showItem(category_name, item_name):
     category = getCategory(category_name)
     item = getItem(item_name)
     return render_template('show.html', category=category, item=item, categories=categories,
-                           user=userLoggedIn())
+                           user=userLoggedIn(), show_item=True)
 
 
 # JSON for the whole catalog - all categories & their respective items
@@ -295,25 +295,40 @@ def addCategory():
             if category:
                 flash('Category already exists with that name')
                 return redirect(url_for('addCategory'))
+        else:
+            flash('Please enter category name')
+            return redirect(url_for('addCategory'))
 
         id = getUserId(login_session['email'])
 
+        if request.form['description']:
+            description = request.form['description']
+        else:
+            flash('Please enter category description')
+            return redirect(url_for('addCategory'))
         image = request.files['picture']
         path = ''
         filename = ''
         print 'image=%s' % image
-        if image and allowed_file(image.filename):
-            filename = secure_filename(image.filename)
-            ufilename = uniqueImageName(filename)
-            print 'filename=%s' % filename
-            print 'ufilename=%s' % ufilename
-            i = imgResizer(image)
-            path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
-            print 'path=%s' % path
-            i.save(path)
+        print 'Allowed_file=%s' % allowed_file(image.filename)
+        if image:
+            if allowed_file(image.filename):
+                filename = secure_filename(image.filename)
+                ufilename = uniqueImageName(filename)
+                print 'filename=%s' % filename
+                print 'ufilename=%s' % ufilename
+                i = imgResizer(image)
+                path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
+                print 'path=%s' % path
+                i.save(path)
+                i.close()
+            else:
+                flash('Please upload an image file')
+                return redirect(url_for('addCategory', name=name, description=description))
+        else:
+            flash('Please upload category image')
+            return redirect(url_for('addCategory'))
 
-        if request.form['description']:
-            description = request.form['description']
         newCategory = Categories(name=request.form['name'],picture=path, description=description, user_id=id,)
         session.add(newCategory)
         session.commit()
@@ -340,29 +355,39 @@ def editCategory(category_name):
         flash('You are not authorized to edit this category')
         return redirect(url_for('catalog'))
 
-
     if category:
         print 'in editcategory'
         if request.method == 'POST':
             if request.form['name']:
                 category.name = request.form['name']
+            else:
+                flash('Please enter a name for the category')
+                return redirect(url_for('editCategory', category_name=category_name))
             if request.form['description']:
                 category.description = request.form['description']
+            else:
+                flash('Please enter description for the category')
+                return redirect(url_for('editCategory', category_name=category_name))
+
             if request.files['picture']:
                 image = request.files['picture']
                 print image
                 path = ''
-                if image and allowed_file(image.filename):
-                    filename = secure_filename(image.filename)
-                    ufilename = uniqueImageName(filename)
-                    print 'filename=%s' % filename
-                    i = imgResizer(image)
-                    path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
-                    os.remove(category.picture)
-                    i.save(path)
-                    category.picture = path
-                    print category.picture
-
+                if image:
+                    if allowed_file(image.filename):
+                        filename = secure_filename(image.filename)
+                        ufilename = uniqueImageName(filename)
+                        print 'filename=%s' % filename
+                        i = imgResizer(image)
+                        path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
+                        os.remove(category.picture)
+                        i.save(path)
+                        category.picture = path
+                        print category.picture
+                        i.close()
+                    else:
+                        flash('Please upload an image file')
+                        return redirect(url_for('editCategory', category_name=category_name))
 
             # for attr in request.form:
             #     if request.form[attr]:
@@ -450,29 +475,38 @@ def editItem(categories_name, item_name):
                 print 'image=%s' % image
                 path = ''
                 filename = ''
-                if image and allowed_file(image.filename):
-                    filename = secure_filename(image.filename)
-                    print 'filename=%s' % filename
-                    ufilename = uniqueImageName(filename)
-                    i = imgResizer(image)
-                    path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
-                    print 'in edit item, path=%s' % path
-                    os.remove(item.picture)
-                    i.save(path)
-                    item.picture = path
-                    print item.picture
+                if image:
+                    if allowed_file(image.filename):
+                        filename = secure_filename(image.filename)
+                        print 'filename=%s' % filename
+                        ufilename = uniqueImageName(filename)
+                        i = imgResizer(image)
+                        path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
+                        print 'in edit item, path=%s' % path
+                        os.remove(item.picture)
+                        i.save(path)
+                        item.picture = path
+                        print item.picture
+                        i.close()
+                else:
+                    flash('Please upload an image file')
+                    return redirect(url_for('editItem', categories_name=categories_name, item_name=item_name))
+
             for attr in request.form:
                     if request.form[attr]:
                         if attr == 'picture':
                             pass
                         setattr(item, attr, request.form[attr])
+                    else:
+                        flash('Please enter the %s for the item' % attr)
+                        return redirect(url_for('editItem', categories_name=categories_name, item_name=item_name))
             session.add(item)
             session.commit()
             flash('Item ' + item.name + ' successfully updated!')
             return redirect(url_for('items', categories_name=categories_name))
         else:
             return render_template('updateitem.html', categories_name=categories_name, item=item, item_name=item_name,
-                                   categories=categories, user=userLoggedIn())
+                                   categories=categories, user=userLoggedIn(), update_item=True)
     else:
         return page_not_found('Item not found')
 
@@ -501,7 +535,7 @@ def deleteItem(categories_name, item_name):
             return redirect(url_for('items', categories_name=categories_name))
         else:
             return render_template('delete.html', categories_name=categories_name, item_name=item_name,
-                                   categories=categories, deleteItem=True, user=userLoggedIn())
+                                   categories=categories, deleteItem=True, user=userLoggedIn(), update_item=True)
     else:
         return page_not_found('Item not found')
 
@@ -515,20 +549,48 @@ def addNewItem(categories_name):
     categories = getAllCategories()
     if request.method == 'POST':
         category = session.query(Categories).filter_by(name=categories_name).one()
-        image = request.files['picture']
-        path = ''
-        if image and allowed_file(image.filename):
-            filename = secure_filename(image.filename)
-            ufilename = uniqueImageName(filename)
-            i = imgResizer(image)
-            path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
-            i.save(path)
-        newItem = Items(name=request.form['name'], description=request.form['description'], price=request.form['price'],
-                        picture=path, category_id=category.id, user_id=getUserId(login_session['email']))
-        session.add(newItem)
-        session.commit()
-        flash('New item ' + request.form['name'] + ' added for category ' + category.name)
-        return redirect(url_for('items', categories_name=categories_name))
+        if category:
+            if request.form['name']:
+                name = request.form['name']
+            else:
+                flash('Please add name for the item')
+                return redirect(url_for('addNewItem', categories_name=category.name))
+            if request.form['description']:
+                desc = request.form['description']
+            else:
+                flash('Please add description for the item')
+                return redirect(url_for('addNewItem', categories_name=category.name))
+            if request.form['price']:
+                price = request.form['price']
+            else:
+                flash('Please add price for the item')
+                return redirect(url_for('addNewItem', categories_name=category.name))
+            image = request.files['picture']
+            path = ''
+            if image:
+                if allowed_file(image.filename):
+                    filename = secure_filename(image.filename)
+                    ufilename = uniqueImageName(filename)
+                    i = imgResizer(image)
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], ufilename)
+                    i.save(path)
+                    i.close()
+                else:
+                    flash('Please upload an image file')
+                    return redirect(url_for('addNewItem', categories_name=categories_name))
+
+            else:
+                flash('Please upload image for the item')
+                return redirect(url_for('addNewItem', categories_name=category.name))
+
+            newItem = Items(name=name, description=desc, price=price, picture=path, category_id=category.id,
+                            user_id=getUserId(login_session['email']))
+            session.add(newItem)
+            session.commit()
+            flash('New item ' + request.form['name'] + ' added for category ' + category.name)
+            return redirect(url_for('items', categories_name=categories_name))
+        else:
+            return page_not_found('Category not found')
     else:
         return render_template('updateitem.html', categories_name=categories_name, categories=categories, newItem=True,
                                user=userLoggedIn())
@@ -625,23 +687,7 @@ def imgResizer(image):
     i = Image.open(image)
     size = 500, 350
     print i.size
-    flag = 0
-    if i.size[0] < 500:
-        newWidth = 500
-        if i.size[1] < 350:
-            newHeight = 350
-        flag = 1
-    elif i.size[1] < 350:
-        newHeight = 350
-        if i.size[0] < 500:
-            newWidth = 500
-        flag = 1
-    if flag == 1:
-        i = i.resize((newWidth, newHeight), resample=0)
-        print i
-    else:
-        i = i.resize(size, resample=0)
-
+    i = i.resize(size, resample=0)
     return i
 
 
