@@ -28,7 +28,7 @@
         </div>
         {% endfor %}
     </div>
-    {% if user %}
+    {% if username %}
     <a href="{{url_for('addNewItem',categories_name=category.name)}}">
         <button class="btn btn-danger">Add new item</button>
     </a>

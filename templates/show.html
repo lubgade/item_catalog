@@ -17,12 +17,12 @@
                         <p>{{item.description}}</p>
                         <div class="row">
                         <div class="col-xs-md-12 col-md-6 text-center">
-                            {% if user %}
+                            {% if username %}
                             <a href="{{url_for('editItem',categories_name=category.name,item_name=item.name)}}">edit</a>
                             {% endif %}
                         </div>
                         <div class="col-xs-md-12 col-md-6 text-center">
-                            {% if user %}
+                            {% if username %}
                             <a href="{{url_for('deleteItem',categories_name=category.name,item_name=item.name)}}">delete</a>
                             {% endif %}
                         </div>

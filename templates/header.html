@@ -20,7 +20,7 @@
         {% endif %}
     </ul>
     <ul class="nav navbar-nav navbar-right">
-        {% if user %}
+        {% if username %}
         <li><a href="{{url_for('gDisconnect')}}" class="">logout</a></li>
         {% else %}
         <li><a href="{{url_for('showLogin')}}" class="">Sign In</a></li>
