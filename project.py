@@ -11,7 +11,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from flask import session as login_session
-import random, string
+import random
+import string
 
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -23,11 +24,12 @@ import uuid
 from functools import wraps
 
 
-CLIENT_ID = json.loads(open('client_secrets.json','r').read())['web']['client_id']
+CLIENT_ID = json.loads(open('client_secrets.json', 'r').
+                       read())['web']['client_id']
 APPLICATION_NAME = "Item-Catalog"
 
 UPLOAD_FOLDER = 'static/images'
-ALLOWED_EXTENSIONS = set(['jpg','jpeg','png','gif'])
+ALLOWED_EXTENSIONS = set(['jpg', 'jpeg', 'png', 'gif'])
 
 app = Flask(__name__)
 
@@ -87,7 +89,7 @@ def gconnect():
     url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' %
            access_token)
     h = httplib2.Http()
-    result = json.loads(h.request(url,'GET')[1])
+    result = json.loads(h.request(url, 'GET')[1])
 
     # if there was an error in the access token info, abort
     if result.get('error') is not None:
@@ -123,13 +125,13 @@ def gconnect():
         response.headers['Content-type'] = 'application/json'
         return response
 
-    #login_session['access_token'] = credentials.access_token
+    # login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
     # Get user info
     userinfo_url = 'https://www.googleapis.com/oauth2/v1/userinfo'
-    params = {'access_token':credentials.access_token, 'alt':'json'}
-    answer = requests.get(userinfo_url,params=params)
+    params = {'access_token': credentials.access_token, 'alt': 'json'}
+    answer = requests.get(userinfo_url, params=params)
 
     data = answer.json()
     print data
@@ -153,7 +155,8 @@ def gconnect():
     # output += '!</h1>'
     # output += '<img src="'
     # output += login_session['picture']
-    # output += '" style="width:300px; height:300px; border-radius:150px; -webkit-border-radius:150px;-moz-border-radius:150px"'
+    # output += '" style="width:300px; height:300px; border-radius:150px;
+    #              -webkit-border-radius:150px;-moz-border-radius:150px"'
     # flash("You are now logged in as %s" % login_session['username'])
     # print "Done"
     # return output
@@ -194,10 +197,11 @@ def gDisconnect():
         del login_session['username']
         del login_session['picture']
         del login_session['email']
-        #response = make_response(json.dumps('Successfully disconnected'), 200)
-        #response.headers['Content-type'] = 'application/json'
+        # response = make_response(json.dumps('Successfully disconnected'),
+        #                          200
+        # response.headers['Content-type'] = 'application/json'
         flash("Successfully disconnected")
-        #return response
+        # return response
         return redirect(url_for('catalog'))
     else:
         response = make_response(json.dumps('Failed to revoke token for '
@@ -249,8 +253,7 @@ def items(categories_name):
         category = getCategory(categories_name)
         items = getAllItems(category.id)
         return render_template('items.html', category=category, items=items,
-                               categories=categories,
-                               i=True)
+                               categories=categories, i=True)
     except:
         flash('Category does not exist')
         return redirect(url_for('catalog'))
@@ -269,8 +272,7 @@ def showItem(category_name, item_name):
     try:
         item = getItem(item_name)
         return render_template('show.html', category=category, item=item,
-                               categories=categories,
-                               show_item=True)
+                               categories=categories, show_item=True)
     except:
         flash('Item does not exist')
         return redirect(url_for('catalog'))
@@ -298,9 +300,9 @@ def catalogJson():
         serializeditems['items'] = allItems
         serializedResult.append(serializeditems)
 
-    #R = json.dumps(serializedResult, indent=4, separators=(',',':'))
-    #print R
-    return jsonify(categories = serializedResult)
+    # R = json.dumps(serializedResult, indent=4, separators=(',',':'))
+    # print R
+    return jsonify(categories=serializedResult)
 
 
 # JSON for a particular category with all its items
@@ -318,14 +320,14 @@ def categoryJson(category_name):
     for i in category.categoryItems:
         item = {}
         for cName in Items.__table__.columns.keys():
-            item[cName] = getattr(i,cName)
+            item[cName] = getattr(i, cName)
         allItems.append(item)
         serializedItems['items'] = allItems
     for columnName in Categories.__table__.columns.keys():
-         serializedItems[columnName] = getattr(category,columnName)
+        serializedItems[columnName] = getattr(category, columnName)
     serializedResult.append(serializedItems)
 
-    return jsonify(category = serializedResult)
+    return jsonify(category=serializedResult)
 
 
 # JSON for all items in a category
@@ -345,7 +347,7 @@ def itemsJson(category_name):
 
 # JSON for a particular item
 @app.route('/Catalog/<string:category_name>/<string:item_name>/item.json')
-def itemJson(category_name,item_name):
+def itemJson(category_name, item_name):
     """
     JSON for a particular item
     param: category_name
@@ -357,9 +359,8 @@ def itemJson(category_name,item_name):
     return jsonify(item=[item.serialize])
 
 
-
 # add a new category
-@app.route('/Catalog/add', methods=['GET','POST'])
+@app.route('/Catalog/add', methods=['GET', 'POST'])
 @login_required
 def addCategory():
     """
@@ -411,8 +412,8 @@ def addCategory():
             flash('Please upload category image')
             return redirect(url_for('addCategory'))
 
-        newCategory = Categories(name=request.form['name'],picture=path,
-                                 description=description, user_id=id,)
+        newCategory = Categories(name=request.form['name'], picture=path,
+                                 description=description, user_id=id)
         session.add(newCategory)
         session.commit()
         flash('Category ' + name + ' successfully added!')
@@ -423,7 +424,7 @@ def addCategory():
 
 
 # edit a category
-@app.route('/Catalog/<string:category_name>/edit', methods=['GET','POST'])
+@app.route('/Catalog/<string:category_name>/edit', methods=['GET', 'POST'])
 @login_required
 def editCategory(category_name):
     """
@@ -434,10 +435,8 @@ def editCategory(category_name):
     categories = getAllCategories()
     category = getCategory(category_name)
     loggeduser_id = getUserId(login_session['email'])
-    #print loggeduser_id
-    #print category.user_id
-    #print checkAdmin(category)
-    if not matchUserId(loggeduser_id, category.user_id) or checkAdmin(category):
+    if not matchUserId(loggeduser_id, category.user_id) or \
+            checkAdmin(category):
         flash('You are not authorized to edit this category')
         return redirect(url_for('catalog'))
 
@@ -478,23 +477,6 @@ def editCategory(category_name):
                         return redirect(url_for('editCategory',
                                                 category_name=category_name))
 
-            # for attr in request.form:
-            #     if request.form[attr]:
-            #         if attr == 'picture':
-            #             image = request.files['picture']
-            #             print 'image=%s' % image
-            #             path = ''
-            #             if image and allowed_file(image.filename):
-            #                 filename = secure_filename(image.filename)
-            #                 path = os.path.join(app.config['UPLOAD_FOLDER'],
-            #                                     filename)
-            #                 print 'path=%s' % path
-            #                 image.save(path)
-            #                 os.remove(category.picture)
-            #                 category.picture = path
-            #                 print category.picture
-            #
-            #         setattr(category, attr, request.form[attr])
             session.add(category)
             session.commit()
             flash('Category ' + category.name + ' successfully updated!')
@@ -509,7 +491,7 @@ def editCategory(category_name):
 
 
 # delete a category
-@app.route('/Catalog/<string:category_name>/delete', methods=['GET','POST'])
+@app.route('/Catalog/<string:category_name>/delete', methods=['GET', 'POST'])
 @login_required
 def deleteCategory(category_name):
     """
@@ -523,7 +505,8 @@ def deleteCategory(category_name):
     loggeduser_id = getUserId(login_session['email'])
     print loggeduser_id
     print category.user_id
-    if not matchUserId(loggeduser_id, category.user_id) or checkAdmin(category):
+    if not matchUserId(loggeduser_id, category.user_id) or \
+            checkAdmin(category):
         flash('You are not authorized to delete this category')
         return redirect(url_for('catalog'))
 
@@ -550,7 +533,7 @@ def deleteCategory(category_name):
 
 # edit an item from a category
 @app.route('/Catalog/<string:categories_name>/<string:item_name>/edit',
-           methods=['GET','POST'])
+           methods=['GET', 'POST'])
 @login_required
 def editItem(categories_name, item_name):
     """
@@ -620,7 +603,7 @@ def editItem(categories_name, item_name):
 
 # delete the item by name from a category
 @app.route('/Catalog/<string:categories_name>/<item_name>/delete',
-           methods=['GET','POST'])
+           methods=['GET', 'POST'])
 @login_required
 def deleteItem(categories_name, item_name):
     """
@@ -656,7 +639,7 @@ def deleteItem(categories_name, item_name):
 
 
 # add a new item for a particular category
-@app.route('/Catalog/<string:categories_name>/add', methods=['GET','POST'])
+@app.route('/Catalog/<string:categories_name>/add', methods=['GET', 'POST'])
 @login_required
 def addNewItem(categories_name):
     """
@@ -666,7 +649,8 @@ def addNewItem(categories_name):
     """
     categories = getAllCategories()
     if request.method == 'POST':
-        category = session.query(Categories).filter_by(name=categories_name).one()
+        category = session.query(Categories).\
+                   filter_by(name=categories_name).one()
         if category:
             if request.form['name']:
                 name = request.form['name']
@@ -744,7 +728,6 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-
 # get all categories
 def getAllCategories():
     """Retruns all categories from the database"""
@@ -780,7 +763,8 @@ def getUserId(email):
 # create a new user
 def createUser(login_session):
     """Create a new user in the database"""
-    newUser = User(name=login_session['username'], email=login_session['email'],
+    newUser = User(name=login_session['username'],
+                   email=login_session['email'],
                    admin=False)
     session.add(newUser)
     session.commit()
@@ -802,7 +786,7 @@ def userLoggedIn():
 
 
 # check if the current user's user_id matches to the user_id in category/item
-def matchUserId(id,tomatch_id):
+def matchUserId(id, tomatch_id):
     """Check if the current user is the owner of a particular
      item or category
     """
@@ -841,5 +825,4 @@ def imgResizer(image):
 if __name__ == "__main__":
     app.secret_key = 'super_secret_key'
     app.debug = True
-    #images = Images(app)
     app.run(host='0.0.0.0', port=8000)
